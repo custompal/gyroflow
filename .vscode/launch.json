@@ -4,13 +4,13 @@
         {
             "name": "Run Gyroflow",
             "request": "launch",
-            "preLaunchTask" : "Build Gyroflow (Release)",
+            "preLaunchTask": "Build Gyroflow (Release)",
             "program": "${workspaceFolder}/target/release/gyroflow",
             "windows": {
                 "environment": [
                     {
                         "name": "PATH",
-                        "value": "${env:Path};${workspaceFolder}/ext/6.7.3/msvc2019_64/bin;${workspaceFolder}/ext/ffmpeg-8.1-windows-desktop-clang-gpl-lite/bin;${workspaceFolder}/ext/vcpkg/installed/x64-windows/bin"
+                        "value": "${env:Path};D:/ProgramData/Qt/6.7.3/msvc2019_64/bin;D:/ProgramData/FFmpeg/ffmpeg-8.1-windows-desktop-vs2026-gpl-lite/bin;E:/code/research/3rdparty/vcpkg/installed/x64-windows-release/bin;C:/Program Files/llvm/bin"
                     }
                 ],
             },
@@ -23,19 +23,19 @@
                 ],
             },
             "cwd": "${workspaceFolder}",
-            "type":"cppvsdbg",
+            "type": "cppvsdbg",
             "console": "integratedTerminal",
         },
         {
             "name": "Debug Gyroflow",
             "request": "launch",
-            "preLaunchTask" : "Build Gyroflow (Debug)",
+            "preLaunchTask": "Build Gyroflow (Debug)",
             "program": "${workspaceFolder}/target/debug/gyroflow",
             "windows": {
                 "environment": [
                     {
                         "name": "PATH",
-                        "value": "${env:Path};${workspaceFolder}/ext/6.7.3/msvc2019_64/bin;${workspaceFolder}/ext/ffmpeg-8.1-windows-desktop-clang-gpl-lite/bin/x64;${workspaceFolder}/ext/vcpkg/installed/x64-windows/bin"
+                        "value": "${env:Path};D:/ProgramData/Qt/6.7.3/msvc2019_64/bin;D:/ProgramData/FFmpeg/ffmpeg-8.1-windows-desktop-vs2026-gpl-lite/bin;E:/code/research/3rdparty/vcpkg/installed/x64-windows-release/bin;C:/Program Files/llvm/bin"
                     }
                 ],
             },
@@ -48,7 +48,7 @@
                 ],
             },
             "cwd": "${workspaceFolder}",
-            "type":"cppvsdbg",
+            "type": "cppvsdbg",
             "console": "integratedTerminal",
         },
         {

@@ -1,0 +1,10 @@
+{
+    "rust-analyzer.cargo.features": ["opencv", "opencl"],
+    "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.check.features": ["opencv", "opencl"],
+    "editor.formatOnSave": true,
+    "editor.inlayHints.enabled": "on",
+    "lldb.displayFormat": "auto",
+    "lldb.showDisassembly": "never",
+    "lldb.consoleMode": "commands"
+}

@@ -4,9 +4,36 @@ KeyStore         := env_var_or_default("KEY_STORE_PATH",  "")
 KeyStoreAlias    := env_var_or_default("KEY_STORE_ALIAS", "")
 KeyStorePassword := env_var_or_default("KEY_STORE_PASS",  "")
 
-export ANDROID_NDK_HOME := env_var_or_default("ANDROID_NDK_HOME", "D:\\Programy\\Android\\sdk\\ndk\\android-ndk-r27d")
-export ANDROID_SDK_ROOT := env_var_or_default("ANDROID_SDK_ROOT", "D:\\Programy\\Android\\sdk\\")
-export JAVA_HOME        := env_var_or_default("JAVA_HOME",        "D:\\Programy\\Java\\jdk-20.0.2")
+# ===== 本地环境配置（根据你的实际安装路径修改）=====
+# Android SDK/NDK/JDK 路径
+LocalAndroidNdk := "D:/ProgramData/Android/Ndk/android-ndk-r27d"
+LocalAndroidSdk := "D:/ProgramData/Android/Sdk/"
+LocalJavaHome   := "D:/Programy/Java/jdk-20.0.2"
+LocalAndroidApiLevel := "26"
+
+# Qt 路径（Android 版）
+LocalQtVersion := "6.7.3"
+LocalQtAndroidPath := "D:/ProgramData/Qt/" + LocalQtVersion + "/android_arm64_v8a"
+LocalQtMingwPath   := "D:/ProgramData/Qt/" + LocalQtVersion + "/mingw_64"
+
+# FFmpeg 路径（Android 版）
+LocalFFmpegDir := "D:/ProgramData/FFmpeg/ffmpeg-8.1-android-gpl-lite"
+
+# OpenCV 路径（Android 版）
+LocalOpenCVPath := "E:/code/research/3rdparty/vcpkg/installed/android/OpenCV-android-sdk"
+
+# LLVM 路径
+LocalLLVMPath := "C:/Program Files/llvm/bin"
+
+# 派生变量
+LocalQtLibs := LocalQtAndroidPath + "/lib"
+LocalOpencvLinkPaths := LocalOpenCVPath + "/sdk/native/staticlibs/arm64-v8a," + LocalOpenCVPath + "/sdk/native/3rdparty/libs/arm64-v8a"
+LocalOpencvIncludePaths := LocalOpenCVPath + "/sdk/native/jni/include"
+# ================================================
+
+export ANDROID_NDK_HOME := env_var_or_default("ANDROID_NDK_HOME", LocalAndroidNdk)
+export ANDROID_HOME := env_var_or_default("ANDROID_HOME", LocalAndroidSdk)
+export JAVA_HOME        := env_var_or_default("JAVA_HOME",        LocalJavaHome)
 export BUILD_PROFILE    := env_var_or_default("BUILD_PROFILE",    "release") # use "deploy" for final apk
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -104,20 +131,35 @@ deploy *param:
 
     $Env:CARGO_TARGET_DIR = "$ProjectDir\target"
 
-    $QT_LIBS = "$ProjectDir\ext\{{QtVersion}}\android_arm64_v8a\lib"
-    $Env:Path = "$ProjectDir\ext\{{QtVersion}}\android_arm64_v8a\bin;$ProjectDir\ext\{{QtVersion}}\mingw_64\bin\;$Env:Path"
-    $Env:QMAKE = "$ProjectDir\ext\{{QtVersion}}\android_arm64_v8a\bin\qmake.bat"
-    $Env:FFMPEG_DIR = "$ProjectDir\ext\ffmpeg-8.1-android-gpl-lite"
+    # 使用本地路径变量（从 just 传递）
+    $QT_LIBS = "{{LocalQtLibs}}"
+    $QT_ANDROID_BIN = "{{LocalQtAndroidPath}}/bin"
+    $QT_MINGW_BIN = "{{LocalQtMingwPath}}/bin"
+    $FFMPEG_DIR = "{{LocalFFmpegDir}}"
+    $OPENCV_PATH = "{{LocalOpenCVPath}}"
+
+    $Env:Path = "$QT_ANDROID_BIN;$QT_MINGW_BIN;$Env:Path"
+    $Env:LIBCLANG_PATH = "{{LocalLLVMPath}}"
+    $Env:QMAKE = "$QT_ANDROID_BIN\qmake.bat"
+    $Env:FFMPEG_DIR = $FFMPEG_DIR
     $Env:OPENCV_LINK_LIBS = "opencv_stitching,opencv_calib3d,opencv_features2d,opencv_imgproc,opencv_video,opencv_flann,opencv_core,tegra_hal,tbb,ittnotify,z,kleidicv,kleidicv_hal,kleidicv_thread"
-    $Env:OPENCV_LINK_PATHS = "$ProjectDir\ext\OpenCV-android-sdk\sdk\native\staticlibs\arm64-v8a,$ProjectDir\ext\OpenCV-android-sdk\sdk\native\3rdparty\libs\arm64-v8a"
-    $Env:OPENCV_INCLUDE_PATHS = "$ProjectDir\ext\OpenCV-android-sdk\sdk\native\jni\include"
+    $Env:OPENCV_LINK_PATHS = "{{LocalOpencvLinkPaths}}"
+    $Env:OPENCV_INCLUDE_PATHS = "{{LocalOpencvIncludePaths}}"
 
     $CLANG_LIB = $Env:LIBCLANG_PATH.replace('\', '/').replace('/bin', '/lib');
     $NDK_REPLACED = $Env:ANDROID_NDK_HOME.replace('\', '/');
-    $SDK_REPLACED = $Env:ANDROID_SDK_ROOT.replace('\', '/');
+    $SDK_REPLACED = $Env:ANDROID_HOME.replace('\', '/');
     $PROJECT_DIR_UNIX = $ProjectDir.replace('\', '/');
     $Env:BINDGEN_EXTRA_CLANG_ARGS = "-I$CLANG_LIB/clang/16.0.0/include --sysroot=$NDK_REPLACED/toolchains/llvm/prebuilt/windows-x86_64/sysroot"
     echo $Env:BINDGEN_EXTRA_CLANG_ARGS
+
+    # 将 NDK 的系统库路径添加到链接器搜索路径
+    $Env:CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER = "rust-lld"
+    $Env:CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS = "-C link-arg=-L$NDK_REPLACED/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/{{LocalAndroidApiLevel}}"
+
+    # 打印构建详细日志（貌似没啥作用）
+    #$Env:RUST_BACKTRACE = "full"
+    #$Env:CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG = "true"
 
     if ("$Env:GITHUB_RUN_NUMBER") {
         $manifest = Join-Path $ProjectDir "_deployment\android\AndroidManifest.xml"
@@ -142,16 +184,36 @@ deploy *param:
     [System.IO.File]::WriteAllText("$QT_LIBS\..\src\3rdparty\gradle\gradle\wrapper\gradle-wrapper.properties", [System.IO.File]::ReadAllText("$QT_LIBS\..\src\3rdparty\gradle\gradle\wrapper\gradle-wrapper.properties").Replace("gradle-8.3-bin", "gradle-8.6-bin"))
     [System.IO.File]::WriteAllText("$QT_LIBS\..\src\android\templates\build.gradle", [System.IO.File]::ReadAllText("$QT_LIBS\..\src\android\templates\build.gradle").Replace("7.4.1", "8.4.2"))
 
-    cargo apk build --profile $Env:BUILD_PROFILE
+    cargo ndk -t arm64-v8a build --profile $Env:BUILD_PROFILE
 
     # Restore [[bin]]
     [System.IO.File]::WriteAllText("$ProjectDir\Cargo.toml", [System.IO.File]::ReadAllText("$ProjectDir\Cargo.toml").Replace("[lib]`ncrate-type = [""cdylib""]", "[[bin]]"))
 
     mkdir "$ProjectDir\target\android-build" -ErrorAction SilentlyContinue
     mkdir "$ProjectDir\target\android-build\libs" -ErrorAction SilentlyContinue
-    Copy-Item -Path "$ProjectDir\target\$Env:BUILD_PROFILE\apk\lib\*" -Destination "$ProjectDir\target\android-build\libs\" -Recurse -Force
+    mkdir "$ProjectDir\target\android-build\libs\arm64-v8a" -ErrorAction SilentlyContinue
+    # cargo ndk outputs to target/aarch64-linux-android/<profile>/, copy the built library
+    Copy-Item -Path "$ProjectDir\target\aarch64-linux-android\$Env:BUILD_PROFILE\libgyroflow.so" -Destination "$ProjectDir\target\android-build\libs\arm64-v8a\" -Force
     # Copy-Item -Path "$ProjectDir\_deployment\android\src" -Destination "$ProjectDir\target\android-build\" -Recurse -Force
     Copy-Item -Path "$ProjectDir\target\aarch64-linux-android\$Env:BUILD_PROFILE\libffmpeg.so" -Destination "$ProjectDir\target\android-build\libs\arm64-v8a\" -Force
+    Copy-Item -Path "$ProjectDir\target\aarch64-linux-android\$Env:BUILD_PROFILE\libmdk.so" -Destination "$ProjectDir\target\android-build\libs\arm64-v8a\" -Force
+    # Copy all FFmpeg libraries from FFmpeg directory
+    $ffmpegLibs = @(
+        "libavcodec.so",
+        "libavformat.so",
+        "libavutil.so",
+        "libswscale.so",
+        "libswresample.so"
+    )
+    foreach ($lib in $ffmpegLibs) {
+        $libPath = "$FFMPEG_DIR\lib\$lib"
+        if (Test-Path $libPath) {
+            Copy-Item -Path $libPath -Destination "$ProjectDir\target\android-build\libs\arm64-v8a\" -Force
+            Write-Host "Copied $lib"
+        } else {
+            Write-Warning "FFmpeg library not found: $libPath"
+        }
+    }
     # Copy-Item -Path "$ProjectDir\target\aarch64-linux-android\$Env:BUILD_PROFILE\libqtav-mediacodec.so" -Destination "$ProjectDir\target\android-build\libs\arm64-v8a\" -Force
     Move-Item -Path "$ProjectDir\target\android-build\libs\arm64-v8a\libgyroflow.so" -Destination "$ProjectDir\target\android-build\libs\arm64-v8a\libgyroflow_arm64-v8a.so" -Force
 
@@ -220,13 +282,16 @@ deploy *param:
     # Strip all libs
     . "$Env:ANDROID_NDK_HOME\toolchains\llvm\prebuilt\windows-x86_64\bin\llvm-strip.exe" "$ProjectDir\target\android-build\libs\arm64-v8a\*.so"
 
-    # Copy unstripped libgyroflow.so
-    Copy-Item -Path "$ProjectDir\target\$Env:BUILD_PROFILE\apk\lib\arm64-v8a\libgyroflow.so" -Destination "$ProjectDir\target\android-build\libs\arm64-v8a\libgyroflow_arm64-v8a.so" -Force
+    # Copy unstripped libgyroflow.so (from cargo ndk output)
+    Copy-Item -Path "$ProjectDir\target\aarch64-linux-android\$Env:BUILD_PROFILE\libgyroflow.so" -Destination "$ProjectDir\target\android-build\libs\arm64-v8a\libgyroflow_arm64-v8a.so" -Force
+
+    $qtAndroidPathUnix = "{{LocalQtAndroidPath}}".Replace('\', '/')
+    $qtMingwPathUnix = "{{LocalQtMingwPath}}".Replace('\', '/')
 
     $androiddeploy = @"
     {
         "description": "",
-        "qt": "$PROJECT_DIR_UNIX/ext/{{QtVersion}}/android_arm64_v8a",
+        "qt": "$qtAndroidPathUnix",
         "qtDataDirectory": ".",
         "qtLibExecsDirectory": "libexec",
         "qtLibsDirectory": "lib",
@@ -242,8 +307,8 @@ deploy *param:
         "android-min-sdk-version": "26",
         "android-package-source-directory": "$PROJECT_DIR_UNIX/_deployment/android",
         "android-target-sdk-version": "36",
-        "qml-importscanner-binary": "$PROJECT_DIR_UNIX/ext/{{QtVersion}}/mingw_64/bin/qmlimportscanner.exe",
-        "rcc-binary": "$PROJECT_DIR_UNIX/ext/{{QtVersion}}/mingw_64/bin/rcc.exe",
+        "qml-importscanner-binary": "$qtMingwPathUnix/bin/qmlimportscanner.exe",
+        "rcc-binary": "$qtMingwPathUnix/bin/rcc.exe",
         "qml-root-path": "$PROJECT_DIR_UNIX/src",
         "stdcpp-path": "$NDK_REPLACED/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib",
         "qrcFiles": "",

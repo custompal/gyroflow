@@ -2,6 +2,16 @@ import 'common.just'
 
 NameSuffix := if Arch == "aarch64" { "windows-arm64" } else { "windows64" }
 
+# Local environment overrides (define as plain variables, not exports)
+LocalQtPath := "D:/ProgramData/Qt/6.7.3/msvc2019_64/bin"
+LocalFFmpegDir := "D:/ProgramData/FFmpeg/ffmpeg-8.1-windows-desktop-vs2026-gpl-lite"
+LocalVcpkgPath := "E:/code/research/3rdparty/vcpkg/installed/x64-windows-release"
+LocalLLVMPath := "C:/Program Files/llvm/bin"
+LocalQmake := LocalQtPath / "qmake.exe"
+LocalOpencvLinkPaths := LocalVcpkgPath / "lib," + LocalVcpkgPath / "/lib/manual-link/opencv4_thirdparty"
+LocalOpencvIncludePaths := LocalVcpkgPath / "include/opencv4"
+LocalExtendedPath := LocalQtPath + ";" + LocalFFmpegDir + "/bin" + ";" + LocalFFmpegDir + "/bin/x64" + ";" + LocalVcpkgPath + "/bin" + ";" + LocalLLVMPath + ";" + env_var('PATH')
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Dependencies ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,15 +109,33 @@ install-deps:
 
 [no-cd]
 build *param:
+    $Env:FFMPEG_DIR="{{LocalFFmpegDir}}" ; \
+    $Env:LIBCLANG_PATH="{{LocalLLVMPath}}" ; \
+    $Env:QMAKE="{{LocalQmake}}" ; \
+    $Env:OPENCV_LINK_PATHS="{{LocalOpencvLinkPaths}}" ; \
+    $Env:OPENCV_INCLUDE_PATHS="{{LocalOpencvIncludePaths}}" ; \
+    $Env:PATH="{{LocalExtendedPath}}" ; \
     cargo build --release -- {{param}}
 
 [no-cd]
 build-debug *param:
-    $Env:OPENCV_LINK_LIBS="$Env:OPENCV_LINK_LIBS,opencv_ml4,opencv_videoio4" ; \
+    $Env:OPENCV_LINK_LIBS="{{OPENCV_LINK_LIBS}},opencv_ml4,opencv_videoio4" ; \
+    $Env:FFMPEG_DIR="{{LocalFFmpegDir}}" ; \
+    $Env:LIBCLANG_PATH="{{LocalLLVMPath}}" ; \
+    $Env:QMAKE="{{LocalQmake}}" ; \
+    $Env:OPENCV_LINK_PATHS="{{LocalOpencvLinkPaths}}" ; \
+    $Env:OPENCV_INCLUDE_PATHS="{{LocalOpencvIncludePaths}}" ; \
+    $Env:PATH="{{LocalExtendedPath}}" ; \
     cargo build -- {{param}}
 
 [no-cd]
 run *param:
+    $Env:FFMPEG_DIR="{{LocalFFmpegDir}}" ; \
+    $Env:LIBCLANG_PATH="{{LocalLLVMPath}}" ; \
+    $Env:QMAKE="{{LocalQmake}}" ; \
+    $Env:OPENCV_LINK_PATHS="{{LocalOpencvLinkPaths}}" ; \
+    $Env:OPENCV_INCLUDE_PATHS="{{LocalOpencvIncludePaths}}" ; \
+    $Env:PATH="{{LocalExtendedPath}}" ; \
     cargo run --release -- {{param}}
 
 [no-cd]
@@ -120,11 +148,23 @@ clippy:
 
 [no-cd]
 debug *param:
-    $Env:OPENCV_LINK_LIBS="$Env:OPENCV_LINK_LIBS,opencv_ml4,opencv_videoio4" ; \
+    $Env:OPENCV_LINK_LIBS="{{OPENCV_LINK_LIBS}},opencv_ml4,opencv_videoio4" ; \
+    $Env:FFMPEG_DIR="{{LocalFFmpegDir}}" ; \
+    $Env:LIBCLANG_PATH="{{LocalLLVMPath}}" ; \
+    $Env:QMAKE="{{LocalQmake}}" ; \
+    $Env:OPENCV_LINK_PATHS="{{LocalOpencvLinkPaths}}" ; \
+    $Env:OPENCV_INCLUDE_PATHS="{{LocalOpencvIncludePaths}}" ; \
+    $Env:PATH="{{LocalExtendedPath}}" ; \
     cargo run -- {{param}}
 
 [no-cd]
 profile *param:
+    $Env:FFMPEG_DIR="{{LocalFFmpegDir}}" ; \
+    $Env:LIBCLANG_PATH="{{LocalLLVMPath}}" ; \
+    $Env:QMAKE="{{LocalQmake}}" ; \
+    $Env:OPENCV_LINK_PATHS="{{LocalOpencvLinkPaths}}" ; \
+    $Env:OPENCV_INCLUDE_PATHS="{{LocalOpencvIncludePaths}}" ; \
+    $Env:PATH="{{LocalExtendedPath}}" ; \
     cargo run --profile profile -- {{param}}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
