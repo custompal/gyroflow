@@ -61,7 +61,7 @@ impl Drop for WgpuWrapper {
         self.pipeline = PipelineType::None;
         self.bind_group = None;
 
-        let _ = self.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None });
+        let _ = self.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: Some(std::time::Duration::from_secs(2)) });
     }
 }
 
@@ -517,7 +517,13 @@ impl WgpuWrapper {
                 let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
                 buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
 
-                let _ = self.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None });
+                let poll_result = self.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: Some(std::time::Duration::from_secs(5)) });
+
+                if poll_result.is_err() {
+                    log::error!("wgpu device.poll timed out after 5s");
+                    self.staging_buffer.as_ref().unwrap().unmap();
+                    return false;
+                }
 
                 if let Some(Ok(())) = pollster::block_on(receiver.receive()) {
                     let data = buffer_slice.get_mapped_range();

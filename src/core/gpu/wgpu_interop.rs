@@ -455,7 +455,7 @@ pub fn handle_output_texture_post(device: &wgpu::Device, buf: &BufferDescription
     match &buf.data {
         #[cfg(target_os = "windows")]
         BufferSource::DirectX11 { texture, device_context, .. } => {
-            let _ = device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None });
+            let _ = device.poll(wgpu::PollType::Wait { submission_index: None, timeout: Some(std::time::Duration::from_secs(5)) });
 
             unsafe {
                 use windows::Win32::Graphics::Direct3D11::*;
@@ -466,7 +466,7 @@ pub fn handle_output_texture_post(device: &wgpu::Device, buf: &BufferDescription
         },
         #[cfg(any(target_os = "windows", target_os = "linux"))]
         BufferSource::CUDABuffer { buffer } => {
-            let _ = device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None });
+            let _ = device.poll(wgpu::PollType::Wait { submission_index: None, timeout: Some(std::time::Duration::from_secs(5)) });
             if let Some(NativeTexture::Cuda(cuda_mem)) = &out_texture.native_texture {
                 // Copy from the Vulkan LINEAR image memory back to the consumer buffer
                 // src_pitch must be the image pitch; dst_pitch is consumer stride.
@@ -480,11 +480,11 @@ pub fn handle_output_texture_post(device: &wgpu::Device, buf: &BufferDescription
         },
         #[cfg(not(any(target_os = "macos", target_os = "ios")))]
         BufferSource::Vulkan { .. } => {
-            let _ = device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None });
+            let _ = device.poll(wgpu::PollType::Wait { submission_index: None, timeout: Some(std::time::Duration::from_secs(5)) });
         },
         #[cfg(any(target_os = "macos", target_os = "ios"))]
         BufferSource::Metal { .. } | BufferSource::MetalBuffer { .. } => {
-            let _ = device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None });
+            let _ = device.poll(wgpu::PollType::Wait { submission_index: None, timeout: Some(std::time::Duration::from_secs(5)) });
         },
         _ => { }
     }
