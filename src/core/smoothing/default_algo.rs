@@ -35,6 +35,11 @@ pub struct DefaultAlgo {
     pub trim_range_only: bool,
     pub max_smoothness: f64,
     pub alpha_0_1s: f64,
+    /// 实时模式：仅执行前向 pass，跳过反向 pass 和第二遍。
+    /// 离线模式下 forward+backward pass 使 smoothed≈original（校正≈0°），
+    /// 因为反向 pass 抵消了前向 pass 的延迟。实时模式仅用前向 pass，
+    /// 保留平滑延迟，使 smoothed 和 original 之间存在有意义的差异 → 非零校正四元数 → 可见防抖效果。
+    pub realtime_mode: bool,
 }
 
 impl Default for DefaultAlgo {
@@ -47,7 +52,8 @@ impl Default for DefaultAlgo {
         second_pass: true,
         trim_range_only: true,
         max_smoothness: 1.0,
-        alpha_0_1s: 0.1
+        alpha_0_1s: 0.1,
+        realtime_mode: false
     } }
 }
 
@@ -65,6 +71,7 @@ impl SmoothingAlgorithm for DefaultAlgo {
             "trim_range_only"  => self.trim_range_only = val > 0.1,
             "max_smoothness"   => self.max_smoothness = val,
             "alpha_0_1s"       => self.alpha_0_1s = val,
+            "realtime_mode"    => self.realtime_mode = val > 0.1,
             _ => log::error!("Invalid parameter name: {}", name)
         }
     }
@@ -79,6 +86,7 @@ impl SmoothingAlgorithm for DefaultAlgo {
             "trim_range_only"  => if self.trim_range_only { 1.0 } else { 0.0 },
             "max_smoothness"   => self.max_smoothness,
             "alpha_0_1s"       => self.alpha_0_1s,
+            "realtime_mode"    => if self.realtime_mode { 1.0 } else { 0.0 },
             _ => 0.0
         }
     }
@@ -189,6 +197,14 @@ impl SmoothingAlgorithm for DefaultAlgo {
                 "precision": 3,
                 "unit": "s",
                 "keyframe": "SmoothingParamTimeConstant2"
+            },
+            {
+                "name": "realtime_mode",
+                "description": "Realtime mode (forward-only pass)",
+                "advanced": true,
+                "type": "CheckBox",
+                "default": if self.realtime_mode { 1.0 } else { 0.0 },
+                "value": if self.realtime_mode { 1.0 } else { 0.0 },
             }
         ])
     }
@@ -205,6 +221,7 @@ impl SmoothingAlgorithm for DefaultAlgo {
         hasher.write_u64(self.smoothness_roll.to_bits());
         hasher.write_u64(self.max_smoothness.to_bits());
         hasher.write_u64(self.alpha_0_1s.to_bits());
+        hasher.write_u8(if self.realtime_mode { 1 } else { 0 });
         hasher.write_u8(if self.per_axis { 1 } else { 0 });
         hasher.write_u8(if self.second_pass { 1 } else { 0 });
         hasher.finish()
@@ -359,6 +376,13 @@ impl SmoothingAlgorithm for DefaultAlgo {
             }
             (*ts, q)
         }).collect();
+
+        // ★ 实时模式：仅使用前向 pass，跳过反向 pass 和第二遍
+        // 反向 pass 会抵消前向 pass 的平滑延迟，使 smoothed≈original → 校正≈identity → 无防抖效果
+        // 前向 pass 的延迟是防抖的关键：smoothed 滞后于 original → correction = smoothed⁻¹ × original ≠ identity
+        if self.realtime_mode {
+            return smoothed1;
+        }
 
         // Reverse pass
         let mut q = *smoothed1.iter().next_back().unwrap().1;
